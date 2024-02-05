@@ -54,4 +54,7 @@ func readQuestions() []Question{
 
 func printQuestions(questions []Question){
     fmt.Println(questions[0].question)
+    for _, a := range(questions[0].alternatives){
+        fmt.Println(a)
+    }
 }
