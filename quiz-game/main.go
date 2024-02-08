@@ -6,92 +6,121 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
-func main(){
+func main() {
 
+	printPresentation()
+	questions := getQuestions()
 
-    printPresentation()
-    questions := getQuestions()
-    printQuestions(questions)
+	totalScore := playRound(questions)
 
-    reader := bufio.NewReader(os.Stdin)
-    result, err := reader.ReadString('\n')
+	resultString := fmt.Sprintf("Total score: %d", totalScore.points)
 
-    if err != nil{
-        fmt.Println("Error reading string")
-        log.Fatal(err)
-    }
-
-    fmt.Println(result)
+	fmt.Println(resultString)
 }
 
-func printPresentation(){
+func playRound(questions []Question) Score {
 
-    fmt.Println("This is a quiz, try to answer as many questions as possible")
+	currScore := Score{points: 0}
+	for _, question := range questions {
+		printQuestion(question)
+
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		trimmedResponse := strings.TrimRight(response, "\n")
+
+		if strings.EqualFold(trimmedResponse, question.correctAlternative) {
+			currScore.addOne()
+		}
+
+		if err != nil {
+			fmt.Println("Error reading string")
+			log.Fatal(err)
+		}
+
+	}
+	return currScore
 }
 
-type Question struct{
+func printPresentation() {
 
-    question string
-    alternatives [4]string
-    correctAlternative string
-
+	fmt.Println("This is a quiz, try to answer as many questions as possible")
 }
 
-func getQuestions() []Question{
-    // temp questions
-    f := openFile("questions.csv")
-    data := getCsvData(f)
-    questions := loadData(data)
-
-    return questions
+type Question struct {
+	question           string
+	alternatives       [4]string
+	correctAlternative string
 }
 
-func openFile(fileName string) *os.File{
-
-    f, err := os.Open(fileName)
-    if err != nil{
-        fmt.Println("Error opening file")
-        log.Fatal(err)
-    }
-
-    return f
+type Score struct {
+	points int
 }
 
-func getCsvData(file *os.File) [][]string{
-    csvReader := csv.NewReader(file)
-    csvReader.FieldsPerRecord = -1
-    data, err := csvReader.ReadAll()
-     if err != nil{
-        fmt.Println("Error reading file")
-        log.Fatal(err)
-    }
-
-    defer file.Close()
-
-
-    return data
+func (currScore *Score) addOne() {
+	result := currScore.points + 1
+	currScore.points = result
 }
 
-func loadData(data [][]string) []Question{
+func getQuestions() []Question {
+	// temp questions
+	f := openFile("questions.csv")
+	data := getCsvData(f)
+	questions := loadData(data)
 
-    var questions []Question
-    for _, row := range data{
-        question := row[0]
-        alternatives := [4]string{row[1], row[2], row[3], row[4]}
-        correct := row[5]
-
-        questions = append(questions, Question{question, alternatives, correct})
-
-    }
-
-    return questions
+	return questions
 }
 
-func printQuestions(questions []Question){
-    fmt.Println(questions[0].question)
-    for _, a := range(questions[0].alternatives){
-        fmt.Println(a)
-    }
+func openFile(fileName string) *os.File {
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		fmt.Println("Error opening file")
+		log.Fatal(err)
+	}
+
+	return f
+}
+
+func getCsvData(file *os.File) [][]string {
+	csvReader := csv.NewReader(file)
+	csvReader.FieldsPerRecord = -1
+	data, err := csvReader.ReadAll()
+	if err != nil {
+		fmt.Println("Error reading file")
+		log.Fatal(err)
+	}
+
+	defer file.Close()
+
+	return data
+}
+
+func loadData(data [][]string) []Question {
+
+	var questions []Question
+	for _, row := range data {
+		question := row[0]
+		alternatives := [4]string{row[1], row[2], row[3], row[4]}
+		correct := row[5]
+
+		questions = append(questions, Question{question, alternatives, correct})
+
+	}
+
+	return questions
+}
+
+func printQuestion(question Question) {
+	fmt.Println()
+
+	fmt.Println(question.question)
+	fmt.Println()
+	for _, a := range question.alternatives {
+		fmt.Println(a)
+
+	}
+	fmt.Println()
 }
