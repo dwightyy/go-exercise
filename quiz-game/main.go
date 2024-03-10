@@ -8,19 +8,23 @@ import (
 	"os"
 	"strings"
 	"time"
+    "flag"
 )
 
 func main() {
 
+    var timeFlag = flag.Int("t", 10, "Time for each round")
+    var fileNameFlag = flag.String("f","questions.csv", "Name of the file. i.e 'questions.csv'" )
+    flag.Parse()
 	printPresentation()
 
-	questions := getQuestions()
+	questions := getQuestions(*fileNameFlag)
 
     scoreCh := make(chan Score)
     stopCh := make(chan bool)
 
 	go playRound(questions, scoreCh, stopCh)
-    go timer(20, stopCh)
+    go timer(*timeFlag, stopCh)
     totalScore := <- scoreCh
 
 	resultString := fmt.Sprintf("Total score: %d/%d", totalScore.points, len(questions))
@@ -57,7 +61,7 @@ func playRound(questions []Question, ch chan Score, stopCh chan bool) {
                  fmt.Println("Time is over")
                  ch <- currScore
                  return
-    }
+        }
     }
     ch <- currScore
 }
@@ -82,9 +86,8 @@ func (currScore *Score) addOne() {
 	currScore.points = result
 }
 
-func getQuestions() []Question {
-	// temp questions
-	f := openFile("questions.csv")
+func getQuestions(fileName string) []Question {
+	f := openFile(fileName)
 	data := getCsvData(f)
 	questions := loadData(data)
 
