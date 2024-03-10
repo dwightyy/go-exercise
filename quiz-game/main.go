@@ -3,67 +3,67 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
-    "flag"
 )
 
 func main() {
 
-    var timeFlag = flag.Int("t", 10, "Time for each round")
-    var fileNameFlag = flag.String("f","questions.csv", "Name of the file. i.e 'questions.csv'" )
-    flag.Parse()
+	var timeFlag = flag.Int("t", 10, "Time for each round")
+	var fileNameFlag = flag.String("f", "questions.csv", "Name of the file. i.e 'questions.csv'")
+	flag.Parse()
 	printPresentation()
 
 	questions := getQuestions(*fileNameFlag)
 
-    scoreCh := make(chan Score)
-    stopCh := make(chan bool)
+	scoreCh := make(chan Score)
+	stopCh := make(chan bool)
 
 	go playRound(questions, scoreCh, stopCh)
-    go timer(*timeFlag, stopCh)
-    totalScore := <- scoreCh
+	go timer(*timeFlag, stopCh)
+	totalScore := <-scoreCh
 
 	resultString := fmt.Sprintf("Total score: %d/%d", totalScore.points, len(questions))
 
 	fmt.Println(resultString)
 }
 
-func timer (inputDuration int, stopCh chan bool){
-    <- time.After(time.Duration(inputDuration)* time.Second)
-    stopCh <- true
+func timer(inputDuration int, stopCh chan bool) {
+	<-time.After(time.Duration(inputDuration) * time.Second)
+	stopCh <- true
 }
 func playRound(questions []Question, ch chan Score, stopCh chan bool) {
 
-    currScore := Score{points: 0}
-    for _, question := range questions {
-        select {
-            default:
-                printQuestion(question)
+	currScore := Score{points: 0}
+	for _, question := range questions {
+		select {
+		default:
+			printQuestion(question)
 
-                reader := bufio.NewReader(os.Stdin)
-                response, err := reader.ReadString('\n')
-                trimmedResponse := strings.TrimRight(response, "\n")
+			reader := bufio.NewReader(os.Stdin)
+			response, err := reader.ReadString('\n')
+			trimmedResponse := strings.TrimRight(response, "\n")
 
-                if strings.EqualFold(trimmedResponse, question.correctAlternative) {
-                    currScore.addOne()
-                }
+			if strings.EqualFold(trimmedResponse, question.correctAlternative) {
+				currScore.addOne()
+			}
 
-                if err != nil {
-                    fmt.Println("Error reading string")
-                    log.Fatal(err)
-                }
+			if err != nil {
+				fmt.Println("Error reading string")
+				log.Fatal(err)
+			}
 
-             case <- stopCh:
-                 fmt.Println("Time is over")
-                 ch <- currScore
-                 return
-        }
-    }
-    ch <- currScore
+		case <-stopCh:
+			fmt.Println("Time is over")
+			ch <- currScore
+			return
+		}
+	}
+	ch <- currScore
 }
 
 func printPresentation() {
