@@ -7,41 +7,59 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
 
 	printPresentation()
+
 	questions := getQuestions()
 
-	totalScore := playRound(questions)
+    scoreCh := make(chan Score)
+    stopCh := make(chan bool)
 
-	resultString := fmt.Sprintf("Total score: %d", totalScore.points)
+	go playRound(questions, scoreCh, stopCh)
+    go timer(20, stopCh)
+    totalScore := <- scoreCh
+
+	resultString := fmt.Sprintf("Total score: %d/%d", totalScore.points, len(questions))
 
 	fmt.Println(resultString)
 }
 
-func playRound(questions []Question) Score {
+func timer (inputDuration int, stopCh chan bool){
+    <- time.After(time.Duration(inputDuration)* time.Second)
+    stopCh <- true
+}
+func playRound(questions []Question, ch chan Score, stopCh chan bool) {
 
-	currScore := Score{points: 0}
-	for _, question := range questions {
-		printQuestion(question)
+    currScore := Score{points: 0}
+    for _, question := range questions {
+        select {
+            default:
+                printQuestion(question)
 
-		reader := bufio.NewReader(os.Stdin)
-		response, err := reader.ReadString('\n')
-		trimmedResponse := strings.TrimRight(response, "\n")
+                reader := bufio.NewReader(os.Stdin)
+                response, err := reader.ReadString('\n')
+                trimmedResponse := strings.TrimRight(response, "\n")
 
-		if strings.EqualFold(trimmedResponse, question.correctAlternative) {
-			currScore.addOne()
-		}
+                if strings.EqualFold(trimmedResponse, question.correctAlternative) {
+                    currScore.addOne()
+                }
 
-		if err != nil {
-			fmt.Println("Error reading string")
-			log.Fatal(err)
-		}
+                if err != nil {
+                    fmt.Println("Error reading string")
+                    log.Fatal(err)
+                }
 
-	}
-	return currScore
+             case <- stopCh:
+                 fmt.Println("Time is over")
+                 ch <- currScore
+                 return
+    }
+    }
+    ch <- currScore
 }
 
 func printPresentation() {
